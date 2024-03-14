@@ -1,11 +1,15 @@
 package event_emitter
 
-import "sync"
+import (
+	"math/rand"
+	"sync"
+	"time"
+)
 
 type eventCallback[T Subscriber[T]] func(suber T, msg any)
 
 type topicField[T Subscriber[T]] struct {
-	subers map[int64]topicElement[T]
+	subers map[string]topicElement[T]
 }
 
 type topicElement[T Subscriber[T]] struct {
@@ -15,7 +19,7 @@ type topicElement[T Subscriber[T]] struct {
 
 type (
 	Subscriber[T any] interface {
-		GetSubscriberID() int64 // 获取订阅者唯一ID
+		GetSubscriberID() string // 获取订阅者唯一ID
 		GetMetadata() Metadata
 	}
 
@@ -27,16 +31,20 @@ type (
 	}
 )
 
-type Int64Subscriber struct {
-	id int64
+type StringSubscriber struct {
+	id string
 	md Metadata
 }
 
-func (c *Int64Subscriber) GetMetadata() Metadata {
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+func (c *StringSubscriber) GetMetadata() Metadata {
 	return c.md
 }
 
-func (c *Int64Subscriber) GetSubscriberID() int64 {
+func (c *StringSubscriber) GetSubscriberID() string {
 	return c.id
 }
 

@@ -1,10 +1,11 @@
 package event_emitter
 
 import (
+	"fmt"
 	"hash/maphash"
+	"math/rand"
 	"strings"
 	"sync"
-	"sync/atomic"
 )
 
 const subTopic = "sub-topic-"
@@ -31,7 +32,6 @@ func (c *Config) init() {
 
 type EventEmitter[T Subscriber[T]] struct {
 	conf    Config
-	serial  atomic.Int64
 	seed    maphash.Seed
 	buckets []*bucket[T]
 }
@@ -63,8 +63,8 @@ func New[T Subscriber[T]](conf *Config) *EventEmitter[T] {
 // NewSubscriber 生成订阅ID. 也可以使用自己的ID, 保证唯一即可.
 // Generate a subscription ID. You can also use your own ID, just make sure it's unique.
 func (c *EventEmitter[T]) NewSubscriber() Subscriber[any] {
-	return &Int64Subscriber{
-		id: c.serial.Add(1),
+	return &StringSubscriber{
+		id: fmt.Sprintf("%d", rand.Int63()),
 		md: newSmap(),
 	}
 }
@@ -146,7 +146,7 @@ func (c *bucket[T]) subscribe(suber T, topic string, f eventCallback[T]) {
 
 	t, ok := c.Topics[topic]
 	if !ok {
-		t = &topicField[T]{subers: make(map[int64]topicElement[T], c.Size)}
+		t = &topicField[T]{subers: make(map[string]topicElement[T], c.Size)}
 		t.subers[subId] = ele
 		c.Topics[topic] = t
 		return
