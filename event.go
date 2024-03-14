@@ -80,9 +80,13 @@ func (c *EventEmitter[T]) Publish(topic string, msg any) {
 	c.getBucket(topic).publish(topic, msg)
 }
 
+func (c *EventEmitter[T]) PublishE(topic string, msg any, f func(subscriber T, err error)) {
+	c.getBucket(topic).publish_e(topic, msg, f)
+}
+
 // Subscribe 订阅主题消息. 注意: 回调函数必须是非阻塞的.
 // Subscribe messages from the topic. Note: Callback functions must be non-blocking.
-func (c *EventEmitter[T]) Subscribe(suber T, topic string, f func(subscriber T, msg any)) {
+func (c *EventEmitter[T]) Subscribe(suber T, topic string, f func(subscriber T, msg any) error) {
 	suber.GetMetadata().Store(subTopic+topic, topic)
 	c.getBucket(topic).subscribe(suber, topic, f)
 }
@@ -165,6 +169,20 @@ func (c *bucket[T]) publish(topic string, msg any) {
 	}
 	for _, v := range t.subers {
 		v.cb(v.suber, msg)
+	}
+}
+
+func (c *bucket[T]) publish_e(topic string, msg any, f func(subscriber T, err error)) {
+	c.Lock()
+	defer c.Unlock()
+
+	t, ok := c.Topics[topic]
+	if !ok {
+		return
+	}
+	for _, v := range t.subers {
+		err := v.cb(v.suber, msg)
+		f(v.suber, err)
 	}
 }
 

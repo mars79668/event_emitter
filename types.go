@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type eventCallback[T Subscriber[T]] func(suber T, msg any)
+type eventCallback[T Subscriber[T]] func(suber T, msg any) error
 
 type topicField[T Subscriber[T]] struct {
 	subers map[string]topicElement[T]
