@@ -185,7 +185,7 @@ func (c *bucket[T]) publish_e(topic string, msg any,
 		return
 	}
 	for _, v := range t.subers {
-		if checkSent(v.suber) {
+		if !checkSent(v.suber) {
 			err := v.cb(v.suber, msg)
 			f(v.suber, err)
 		}
