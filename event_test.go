@@ -2,11 +2,12 @@ package event_emitter
 
 import (
 	"fmt"
-	"github.com/lxzan/event_emitter/internal/helper"
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/lxzan/event_emitter/internal/helper"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEventEmitter_Publish(t *testing.T) {
@@ -16,16 +17,19 @@ func TestEventEmitter_Publish(t *testing.T) {
 		wg.Add(2)
 
 		suber1 := em.NewSubscriber()
-		em.Subscribe(suber1, "test", func(subscriber Subscriber[any], msg any) {
-			t.Logf("id=%d, msg=%v\n", suber1, msg)
-			wg.Done()
-		})
-		em.Subscribe(suber1, "oh", func(subscriber Subscriber[any], msg any) {})
+		em.Subscribe(suber1, "test",
+			func(subscriber Subscriber[any], msg any) error {
+				t.Logf("id=%d, msg=%v\n", suber1, msg)
+				wg.Done()
+				return nil
+			})
+		em.Subscribe(suber1, "oh", func(subscriber Subscriber[any], msg any) error { return nil })
 
 		suber2 := em.NewSubscriber()
-		em.Subscribe(suber2, "test", func(subscriber Subscriber[any], msg any) {
+		em.Subscribe(suber2, "test", func(subscriber Subscriber[any], msg any) error {
 			t.Logf("id=%d, msg=%v\n", suber2, msg)
 			wg.Done()
+			return nil
 		})
 
 		em.Publish("test", "hello!")
@@ -39,12 +43,16 @@ func TestEventEmitter_Publish(t *testing.T) {
 	t.Run("timeout", func(t *testing.T) {
 		var em = New[Subscriber[any]](&Config{})
 		var suber1 = em.NewSubscriber()
-		em.Subscribe(suber1, "topic1", func(subscriber Subscriber[any], msg any) {
-			time.Sleep(100 * time.Millisecond)
-		})
-		em.Subscribe(suber1, "topic2", func(subscriber Subscriber[any], msg any) {
-			time.Sleep(100 * time.Millisecond)
-		})
+		em.Subscribe(suber1, "topic1",
+			func(subscriber Subscriber[any], msg any) error {
+				time.Sleep(100 * time.Millisecond)
+				return nil
+			})
+		em.Subscribe(suber1, "topic2",
+			func(subscriber Subscriber[any], msg any) error {
+				time.Sleep(100 * time.Millisecond)
+				return nil
+			})
 
 		em.Publish("topic1", 1)
 		em.Publish("topic1", 2)
@@ -58,9 +66,11 @@ func TestEventEmitter_Publish(t *testing.T) {
 		wg.Add(count)
 		for i := 0; i < count; i++ {
 			id := em.NewSubscriber()
-			em.Subscribe(id, "greet", func(subscriber Subscriber[any], msg any) {
-				wg.Done()
-			})
+			em.Subscribe(id, "greet",
+				func(subscriber Subscriber[any], msg any) error {
+					wg.Done()
+					return nil
+				})
 		}
 		em.Publish("greet", 1)
 		wg.Wait()
@@ -82,11 +92,12 @@ func TestEventEmitter_Publish(t *testing.T) {
 		for i := 0; i < count; i++ {
 			topic := fmt.Sprintf("topic%d", i)
 			for j := 0; j < i+1; j++ {
-				em.Subscribe(subers[j], topic, func(subscriber Subscriber[any], msg any) {
+				em.Subscribe(subers[j], topic, func(subscriber Subscriber[any], msg any) error {
 					wg.Done()
 					mu.Lock()
 					mapping[topic]++
 					mu.Unlock()
+					return nil
 				})
 			}
 		}
@@ -130,12 +141,14 @@ func TestEventEmitter_Publish(t *testing.T) {
 				var topic = topics[j]
 				mapping1[topic]++
 				subjects[topic] = 1
-				em.Subscribe(subers[i], topic, func(subscriber Subscriber[any], msg any) {
-					mu.Lock()
-					mapping2[topic]++
-					mu.Unlock()
-					wg.Done()
-				})
+				em.Subscribe(subers[i], topic,
+					func(subscriber Subscriber[any], msg any) error {
+						mu.Lock()
+						mapping2[topic]++
+						mu.Unlock()
+						wg.Done()
+						return nil
+					})
 			}
 		}
 
@@ -154,15 +167,21 @@ func TestEventEmitter_UnSubscribe(t *testing.T) {
 	t.Run("", func(t *testing.T) {
 		var em = New[Subscriber[any]](&Config{})
 		var suber1 = em.NewSubscriber()
-		em.Subscribe(suber1, "topic1", func(subscriber Subscriber[any], msg any) {
-			time.Sleep(100 * time.Millisecond)
-		})
-		em.Subscribe(suber1, "topic2", func(subscriber Subscriber[any], msg any) {
-			time.Sleep(100 * time.Millisecond)
-		})
-		em.Subscribe(suber1, "topic3", func(subscriber Subscriber[any], msg any) {
-			time.Sleep(100 * time.Millisecond)
-		})
+		em.Subscribe(suber1, "topic1",
+			func(subscriber Subscriber[any], msg any) error {
+				time.Sleep(100 * time.Millisecond)
+				return nil
+			})
+		em.Subscribe(suber1, "topic2",
+			func(subscriber Subscriber[any], msg any) error {
+				time.Sleep(100 * time.Millisecond)
+				return nil
+			})
+		em.Subscribe(suber1, "topic3",
+			func(subscriber Subscriber[any], msg any) error {
+				time.Sleep(100 * time.Millisecond)
+				return nil
+			})
 		assert.ElementsMatch(t, em.GetTopicsBySubscriber(suber1), []string{"topic1", "topic2", "topic3"})
 		em.UnSubscribe(suber1, "topic1")
 		assert.ElementsMatch(t, em.GetTopicsBySubscriber(suber1), []string{"topic2", "topic3"})
@@ -177,8 +196,8 @@ func TestEventEmitter_UnSubscribe(t *testing.T) {
 		var em = New[Subscriber[any]](nil)
 		var suber1 = em.NewSubscriber()
 		var suber2 = em.NewSubscriber()
-		em.Subscribe(suber1, "chat", func(subscriber Subscriber[any], msg any) {})
-		em.Subscribe(suber2, "chat", func(subscriber Subscriber[any], msg any) {})
+		em.Subscribe(suber1, "chat", func(subscriber Subscriber[any], msg any) error { return nil })
+		em.Subscribe(suber2, "chat", func(subscriber Subscriber[any], msg any) error { return nil })
 		em.UnSubscribe(suber1, "chat")
 		assert.Equal(t, em.CountSubscriberByTopic("chat"), 1)
 
