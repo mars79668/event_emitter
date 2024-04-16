@@ -136,10 +136,23 @@ func (c *EventEmitter[T]) CountSubscriberByTopic(topic string) int {
 	return c.getBucket(topic).countTopicSubscriber(topic)
 }
 
+func (c *EventEmitter[T]) TopicStatus() []*TopicStatus {
+	var status []*TopicStatus
+	for _, b := range c.buckets {
+		status = append(status, b.TopicStatus()...)
+	}
+	return status
+}
+
 type bucket[T Subscriber[T]] struct {
 	sync.Mutex
 	Size   int64
 	Topics map[string]*topicField[T]
+}
+
+type TopicStatus struct {
+	Topic string
+	Count int
 }
 
 // 新增订阅
@@ -159,6 +172,17 @@ func (c *bucket[T]) subscribe(suber T, topic string, f eventCallback[T]) {
 	}
 
 	t.subers[subId] = ele
+}
+
+func (c *bucket[T]) TopicStatus() []*TopicStatus {
+	c.Lock()
+	defer c.Unlock()
+
+	var status []*TopicStatus
+	for topic, t := range c.Topics {
+		status = append(status, &TopicStatus{Topic: topic, Count: len(t.subers)})
+	}
+	return status
 }
 
 func (c *bucket[T]) publish(topic string, msg any) {
